@@ -17,26 +17,25 @@ const Signup = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    // Step 2: Profile Info
+    // Step 2: Profile Info (using snake_case)
     age: '',
     weight: '',
     height: '',
-    activityLevel: 'moderate',
+    activity_level: 'moderate',
     goal: 'maintain',
-    targetWeight: '',
-    targetDate: ''
+    target_weight: '',
+    target_date: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const calculateDailyGoal = () => {
-    const { age, weight, height, activityLevel, goal } = formData;
-    
+    const { age, weight, height, activity_level, goal } = formData;
     if (!age || !weight || !height) return 2000;
-    
+
     // Calculate BMR using Mifflin-St Jeor Equation (assuming male for simplicity)
     const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-    
+
     // Activity multipliers
     const activityMultipliers = {
       sedentary: 1.2,
@@ -45,23 +44,23 @@ const Signup = () => {
       active: 1.725,
       very_active: 1.9
     };
-    
-    const tdee = bmr * activityMultipliers[activityLevel];
-    
+
+    const tdee = bmr * activityMultipliers[activity_level];
+
     // Goal adjustments
     const goalAdjustments = {
       lose: -500,
       maintain: 0,
       gain: 500
     };
-    
+
     return Math.round(tdee + goalAdjustments[goal]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
-    
+
     if (step === 1) {
       if (formData.password !== formData.confirmPassword) {
         return;
@@ -69,10 +68,9 @@ const Signup = () => {
       setStep(2);
       return;
     }
-    
-    // Step 2: Complete signup with profile data
-    const dailyGoal = calculateDailyGoal();
-    
+
+    // Step 2: Complete signup with profile data (all in snake_case)
+    const daily_goal = calculateDailyGoal();
     const result = await signup({
       name: formData.name,
       email: formData.email,
@@ -80,23 +78,20 @@ const Signup = () => {
       age: Number(formData.age),
       weight: Number(formData.weight),
       height: Number(formData.height),
-      activityLevel: formData.activityLevel,
+      activity_level: formData.activity_level,
       goal: formData.goal,
-      targetWeight: Number(formData.targetWeight) || Number(formData.weight),
-      targetDate: formData.targetDate || null,
-      dailyGoal
+      target_weight: Number(formData.target_weight) || Number(formData.weight),
+      target_date: formData.target_date || null,
+      daily_goal
     });
-    
+
     if (result.success) {
       navigate('/');
     }
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const activityLevels = [
@@ -336,8 +331,8 @@ const Signup = () => {
                   Activity Level
                 </label>
                 <select
-                  name="activityLevel"
-                  value={formData.activityLevel}
+                  name="activity_level"
+                  value={formData.activity_level}
                   onChange={handleChange}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
@@ -388,8 +383,8 @@ const Signup = () => {
                     </label>
                     <input
                       type="number"
-                      name="targetWeight"
-                      value={formData.targetWeight}
+                      name="target_weight"
+                      value={formData.target_weight}
                       onChange={handleChange}
                       min="30"
                       max="300"
@@ -403,8 +398,8 @@ const Signup = () => {
                     </label>
                     <input
                       type="date"
-                      name="targetDate"
-                      value={formData.targetDate}
+                      name="target_date"
+                      value={formData.target_date}
                       onChange={handleChange}
                       min={getMinDate()}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"

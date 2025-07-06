@@ -14,9 +14,7 @@ import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import SuperadminSetup from './pages/SuperadminSetup';
 import AdminPanel from './components/AdminPanel';
-import SuperadminPanel from './components/SuperadminPanel';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -25,13 +23,9 @@ function App() {
     // Simulate app initialization
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
-
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Note: Demo users are now managed by the superadmin system
-  // They are automatically created only if no superadmin exists
 
   if (isLoading) {
     return (
@@ -60,7 +54,6 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/superadmin-setup" element={<SuperadminSetup />} />
               
               {/* Protected Routes */}
               <Route path="/*" element={
@@ -77,7 +70,6 @@ function App() {
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/admin" element={<AdminPanel />} />
-                        <Route path="/superadmin" element={<SuperadminPanel />} />
                       </Routes>
                     </AnimatePresence>
                   </main>

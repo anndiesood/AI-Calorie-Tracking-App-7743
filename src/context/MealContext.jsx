@@ -14,27 +14,16 @@ const initialState = {
 function mealReducer(state, action) {
   switch (action.type) {
     case 'SET_MEALS':
-      return {
-        ...state,
-        meals: action.payload
-      };
+      return { ...state, meals: action.payload };
     case 'ADD_MEAL':
-      return {
-        ...state,
-        meals: [action.payload, ...state.meals]
-      };
+      return { ...state, meals: [action.payload, ...state.meals] };
     case 'DELETE_MEAL':
-      return {
-        ...state,
-        meals: state.meals.filter(meal => meal.id !== action.payload)
-      };
+      return { ...state, meals: state.meals.filter(meal => meal.id !== action.payload) };
     case 'UPDATE_MEAL':
       return {
         ...state,
         meals: state.meals.map(meal =>
-          meal.id === action.payload.id
-            ? { ...meal, ...action.payload.updates }
-            : meal
+          meal.id === action.payload.id ? { ...meal, ...action.payload.updates } : meal
         )
       };
     case 'SET_LOADING':
@@ -63,8 +52,8 @@ export function MealProvider({ children }) {
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      if (useSupabase) {
-        // Load from Supabase
+      if (useSupabase && supabase) {
+        // Load from Supabase with correct column names
         const { data, error } = await supabase
           .from('meals')
           .select('*')
@@ -73,7 +62,13 @@ export function MealProvider({ children }) {
 
         if (error) throw error;
 
-        dispatch({ type: 'SET_MEALS', payload: data || [] });
+        // Transform data to match frontend expectations
+        const transformedMeals = (data || []).map(meal => ({
+          ...meal,
+          mealType: meal.meal_type // Transform meal_type to mealType for frontend
+        }));
+
+        dispatch({ type: 'SET_MEALS', payload: transformedMeals });
       } else {
         // Load from localStorage
         const savedData = localStorage.getItem(`mealTracker_${user.id}`);
@@ -118,17 +113,37 @@ export function MealProvider({ children }) {
         timestamp: new Date().toISOString()
       };
 
-      if (useSupabase) {
+      if (useSupabase && supabase) {
+        // Transform mealType to meal_type for database
+        const dbMeal = {
+          ...newMeal,
+          meal_type: newMeal.mealType, // Transform mealType to meal_type for database
+          mealType: undefined // Remove mealType property
+        };
+
+        // Remove undefined values
+        Object.keys(dbMeal).forEach(key => {
+          if (dbMeal[key] === undefined) {
+            delete dbMeal[key];
+          }
+        });
+
         // Save to Supabase
         const { data, error } = await supabase
           .from('meals')
-          .insert([newMeal])
+          .insert([dbMeal])
           .select()
           .single();
 
         if (error) throw error;
 
-        dispatch({ type: 'ADD_MEAL', payload: data });
+        // Transform back for frontend
+        const frontendMeal = {
+          ...data,
+          mealType: data.meal_type
+        };
+
+        dispatch({ type: 'ADD_MEAL', payload: frontendMeal });
       } else {
         // Save to localStorage
         dispatch({ type: 'ADD_MEAL', payload: newMeal });
@@ -144,7 +159,7 @@ export function MealProvider({ children }) {
     if (!user) return;
 
     try {
-      if (useSupabase) {
+      if (useSupabase && supabase) {
         // Delete from Supabase
         const { error } = await supabase
           .from('meals')
@@ -171,11 +186,18 @@ export function MealProvider({ children }) {
     if (!user) return;
 
     try {
-      if (useSupabase) {
+      if (useSupabase && supabase) {
+        // Transform updates for database if needed
+        const dbUpdates = { ...updates };
+        if (dbUpdates.mealType !== undefined) {
+          dbUpdates.meal_type = dbUpdates.mealType;
+          delete dbUpdates.mealType;
+        }
+
         // Update in Supabase
         const { error } = await supabase
           .from('meals')
-          .update(updates)
+          .update(dbUpdates)
           .eq('id', id)
           .eq('user_id', user.id);
 
@@ -204,7 +226,7 @@ export function MealProvider({ children }) {
       age: user.age,
       weight: user.weight,
       height: user.height,
-      activityLevel: user.activity_level || user.activityLevel,
+      activity_level: user.activity_level || user.activityLevel,
       goal: user.goal
     } : null,
     addMeal,

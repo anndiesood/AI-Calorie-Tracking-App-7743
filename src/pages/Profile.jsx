@@ -15,20 +15,19 @@ const Profile = () => {
     age: user?.age || '',
     weight: user?.weight || '',
     height: user?.height || '',
-    activityLevel: user?.activityLevel || 'moderate',
+    activity_level: user?.activity_level || 'moderate',
     goal: user?.goal || 'maintain',
-    targetWeight: user?.targetWeight || user?.weight || '',
-    targetDate: user?.targetDate || ''
+    target_weight: user?.target_weight || user?.weight || '',
+    target_date: user?.target_date || ''
   });
 
   const calculateDailyGoal = () => {
-    const { age, weight, height, activityLevel, goal } = formData;
-    
-    if (!age || !weight || !height) return user?.dailyGoal || 2000;
-    
+    const { age, weight, height, activity_level, goal } = formData;
+    if (!age || !weight || !height) return user?.daily_goal || 2000;
+
     // Calculate BMR using Mifflin-St Jeor Equation
     const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-    
+
     // Activity multipliers
     const activityMultipliers = {
       sedentary: 1.2,
@@ -37,16 +36,16 @@ const Profile = () => {
       active: 1.725,
       very_active: 1.9
     };
-    
-    const tdee = bmr * activityMultipliers[activityLevel];
-    
+
+    const tdee = bmr * activityMultipliers[activity_level];
+
     // Goal adjustments
     const goalAdjustments = {
       lose: -500,
       maintain: 0,
       gain: 500
     };
-    
+
     return Math.round(tdee + goalAdjustments[goal]);
   };
 
@@ -55,21 +54,23 @@ const Profile = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        updateUser({ profilePhoto: e.target.result });
+        updateUser({ profile_photo: e.target.result });
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSave = () => {
-    const dailyGoal = calculateDailyGoal();
+    const daily_goal = calculateDailyGoal();
+    
+    // All data is already in snake_case format
     updateUser({
       ...formData,
       age: Number(formData.age),
       weight: Number(formData.weight),
       height: Number(formData.height),
-      targetWeight: Number(formData.targetWeight),
-      dailyGoal
+      target_weight: Number(formData.target_weight),
+      daily_goal
     });
     setIsEditing(false);
   };
@@ -104,6 +105,7 @@ const Profile = () => {
 
   const getRoleBadge = (role) => {
     const badges = {
+      superadmin: { label: 'Superadmin', color: 'bg-purple-100 text-purple-800' },
       admin: { label: 'Admin', color: 'bg-red-100 text-red-800' },
       moderator: { label: 'Moderator', color: 'bg-yellow-100 text-yellow-800' },
       user: { label: 'User', color: 'bg-green-100 text-green-800' }
@@ -125,15 +127,15 @@ const Profile = () => {
 
   const getProgressData = () => {
     const currentWeight = Number(formData.weight);
-    const targetWeight = Number(formData.targetWeight);
+    const targetWeight = Number(formData.target_weight);
     const startWeight = Number(user?.weight) || currentWeight;
-    
+
     if (formData.goal === 'maintain') return null;
-    
+
     const totalChange = Math.abs(targetWeight - startWeight);
     const currentChange = Math.abs(currentWeight - startWeight);
     const progress = totalChange > 0 ? (currentChange / totalChange) * 100 : 0;
-    
+
     return {
       current: currentWeight,
       target: targetWeight,
@@ -170,9 +172,7 @@ const Profile = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => isEditing ? handleSave() : setIsEditing(true)}
               className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
-                isEditing 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                isEditing ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <SafeIcon icon={isEditing ? FiSave : FiEdit} className="w-4 h-4" />
@@ -199,10 +199,10 @@ const Profile = () => {
         <div className="text-center mb-6">
           <div className="relative inline-block">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center mx-auto mb-3">
-              {user?.profilePhoto ? (
-                <img 
-                  src={user.profilePhoto} 
-                  alt="Profile" 
+              {user?.profile_photo ? (
+                <img
+                  src={user.profile_photo}
+                  alt="Profile"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -299,7 +299,6 @@ const Profile = () => {
                 <div className="p-3 bg-gray-50 rounded-lg text-gray-800">{formData.age}</div>
               )}
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Weight (kg)
@@ -394,15 +393,14 @@ const Profile = () => {
                 {isEditing ? (
                   <input
                     type="number"
-                    value={formData.targetWeight}
-                    onChange={(e) => setFormData({ ...formData, targetWeight: Number(e.target.value) })}
+                    value={formData.target_weight}
+                    onChange={(e) => setFormData({ ...formData, target_weight: Number(e.target.value) })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 ) : (
-                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800">{formData.targetWeight} kg</div>
+                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800">{formData.target_weight} kg</div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Target Date (Optional)
@@ -410,14 +408,14 @@ const Profile = () => {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={formData.targetDate}
-                    onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                    value={formData.target_date}
+                    onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
                     min={getMinDate()}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 ) : (
                   <div className="p-3 bg-gray-50 rounded-lg text-gray-800">
-                    {formData.targetDate ? new Date(formData.targetDate).toLocaleDateString() : 'Not set'}
+                    {formData.target_date ? new Date(formData.target_date).toLocaleDateString() : 'Not set'}
                   </div>
                 )}
               </div>
@@ -431,8 +429,8 @@ const Profile = () => {
             </label>
             {isEditing ? (
               <select
-                value={formData.activityLevel}
-                onChange={(e) => setFormData({ ...formData, activityLevel: e.target.value })}
+                value={formData.activity_level}
+                onChange={(e) => setFormData({ ...formData, activity_level: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 {activityLevels.map((level) => (
@@ -444,10 +442,10 @@ const Profile = () => {
             ) : (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <div className="font-medium text-gray-800">
-                  {activityLevels.find(l => l.value === formData.activityLevel)?.label}
+                  {activityLevels.find(l => l.value === formData.activity_level)?.label}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {activityLevels.find(l => l.value === formData.activityLevel)?.description}
+                  {activityLevels.find(l => l.value === formData.activity_level)?.description}
                 </div>
               </div>
             )}
@@ -459,12 +457,14 @@ const Profile = () => {
               <div>
                 <h4 className="font-medium text-primary-800">Daily Calorie Goal</h4>
                 <p className="text-2xl font-bold text-primary-600">
-                  {isEditing ? calculateDailyGoal().toLocaleString() : (user?.dailyGoal || 2000).toLocaleString()}
+                  {isEditing ? calculateDailyGoal().toLocaleString() : (user?.daily_goal || 2000).toLocaleString()}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-sm text-primary-600">
-                  {isEditing && formData.age && formData.weight && formData.height ? 'Updated based on your changes' : 'Current goal'}
+                  {isEditing && formData.age && formData.weight && formData.height
+                    ? 'Updated based on your changes'
+                    : 'Current goal'}
                 </div>
               </div>
             </div>

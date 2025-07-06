@@ -9,7 +9,7 @@ const { FiHome, FiPlus, FiClock, FiBarChart3, FiUser, FiBookOpen, FiUsers, FiShi
 
 const Header = () => {
   const location = useLocation();
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission } = useAuth();
 
   const navItems = [
     { path: '/', icon: FiHome, label: 'Home' },
@@ -25,14 +25,9 @@ const Header = () => {
     navItems.push({ path: '/admin', icon: FiUsers, label: 'Admin' });
   }
 
-  // Add superadmin panel for superadmin
-  if (hasRole('superadmin')) {
-    navItems.push({ path: '/superadmin', icon: FiShield, label: 'Super' });
-  }
-
   return (
     <>
-      {/* Top Header - Reduced height */}
+      {/* Top Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-2">
           <div className="flex items-center justify-center">
@@ -61,29 +56,21 @@ const Header = () => {
                     icon={item.icon}
                     className={`w-5 h-5 ${
                       location.pathname === item.path
-                        ? hasRole('superadmin') && item.path === '/superadmin'
-                          ? 'text-purple-500'
-                          : 'text-primary-500'
+                        ? 'text-primary-500'
                         : 'text-gray-400'
                     }`}
                   />
                   {location.pathname === item.path && (
                     <motion.div
                       layoutId="activeTab"
-                      className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full ${
-                        hasRole('superadmin') && item.path === '/superadmin'
-                          ? 'bg-purple-500'
-                          : 'bg-primary-500'
-                      }`}
+                      className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full bg-primary-500"
                     />
                   )}
                 </div>
                 <span
                   className={`text-xs mt-1 ${
                     location.pathname === item.path
-                      ? hasRole('superadmin') && item.path === '/superadmin'
-                        ? 'text-purple-500 font-medium'
-                        : 'text-primary-500 font-medium'
+                      ? 'text-primary-500 font-medium'
                       : 'text-gray-400'
                   }`}
                 >
