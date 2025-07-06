@@ -5,12 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiUserPlus, FiArrowRight, FiArrowLeft } = FiIcons;
+const { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiUserPlus, FiArrowRight, FiArrowLeft, FiCheck } = FiIcons;
 
 const Signup = () => {
   const navigate = useNavigate();
   const { signup, loading, error, clearError } = useAuth();
   const [step, setStep] = useState(1);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
     name: '',
@@ -86,7 +87,11 @@ const Signup = () => {
     });
 
     if (result.success) {
-      navigate('/');
+      if (result.requiresConfirmation) {
+        setShowEmailConfirmation(true);
+      } else {
+        navigate('/');
+      }
     }
   };
 
@@ -112,6 +117,71 @@ const Signup = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
+
+  // Email confirmation screen
+  if (showEmailConfirmation) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md"
+        >
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            {/* Logo */}
+            <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-2xl">🍽️</span>
+            </div>
+
+            {/* Success Icon */}
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <SafeIcon icon={FiCheck} className="w-10 h-10 text-green-500" />
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Check Your Email!</h1>
+
+            {/* Message */}
+            <div className="text-gray-600 mb-6 space-y-2">
+              <p>We've sent a confirmation link to:</p>
+              <p className="font-medium text-gray-800">{formData.email}</p>
+              <p className="text-sm">Click the link in your email to complete your registration and start tracking your meals!</p>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+              <h3 className="font-medium text-blue-800 mb-2">Next Steps:</h3>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Check your email inbox</li>
+                <li>• Click the confirmation link</li>
+                <li>• You'll be automatically signed in</li>
+                <li>• Start tracking your meals!</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full bg-primary-500 text-white py-3 rounded-lg font-medium hover:bg-primary-600 transition-colors"
+              >
+                Go to Login
+              </button>
+              <p className="text-sm text-gray-500">
+                Didn't receive the email? Check your spam folder or{' '}
+                <button 
+                  onClick={() => setShowEmailConfirmation(false)}
+                  className="text-primary-500 hover:text-primary-600 font-medium"
+                >
+                  try signing up again
+                </button>
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center px-4 py-8">
@@ -151,7 +221,7 @@ const Signup = () => {
           </div>
 
           {/* Error Message */}
-          {error && (
+          {error && !error.includes('check your email') && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}

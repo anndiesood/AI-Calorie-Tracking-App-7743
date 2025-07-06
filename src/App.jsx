@@ -14,6 +14,7 @@ import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AuthCallback from './pages/AuthCallback';
 import AdminPanel from './components/AdminPanel';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -54,6 +56,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* Protected Routes */}
               <Route path="/*" element={

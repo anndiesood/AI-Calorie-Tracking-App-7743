@@ -116,6 +116,28 @@ export function AuthProvider({ children }) {
     initializeAuth();
   }, []);
 
+  // Helper function to get redirect URL based on environment
+  const getRedirectURL = () => {
+    // Always use the production domain for redirects
+    if (window.location.hostname === 'mindmymeals.com' || 
+        window.location.hostname === 'www.mindmymeals.com' ||
+        window.location.hostname.includes('netlify.app') ||
+        window.location.hostname.includes('vercel.app')) {
+      return 'https://www.mindmymeals.com';
+    }
+    // Only use localhost for actual local development
+    return 'http://localhost:3000';
+  };
+
+  // Helper function to get the correct login URL
+  const getLoginURL = () => {
+    // Always redirect to production domain unless actually on localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return '/login';
+    }
+    return 'https://www.mindmymeals.com/login';
+  };
+
   const initializeAuth = async () => {
     console.log('🚀 Initializing MealTracker authentication...');
 
@@ -141,11 +163,15 @@ export function AuthProvider({ children }) {
 
         // Listen for auth changes
         supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('🔄 Auth state change:', event);
+          
           if (event === 'SIGNED_IN' && session?.user) {
             console.log('🔄 Auth state change - loading profile...');
             await loadUserProfile(session.user.id);
           } else if (event === 'SIGNED_OUT') {
             dispatch({ type: 'LOGOUT' });
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('🔄 Token refreshed');
           }
         });
       } catch (error) {
@@ -414,7 +440,8 @@ export function AuthProvider({ children }) {
           email: userData.email.trim(),
           password: userData.password,
           options: {
-            data: dbUserData
+            data: dbUserData,
+            emailRedirectTo: `${getRedirectURL()}/auth/callback`
           }
         });
 
@@ -422,6 +449,16 @@ export function AuthProvider({ children }) {
 
         if (data.user) {
           console.log('✅ Supabase account created successfully');
+          
+          // Check if email confirmation is disabled (instant login)
+          if (data.session) {
+            console.log('✅ Auto-login enabled, user signed in immediately');
+            return { success: true };
+          } else {
+            console.log('📧 Email confirmation required');
+            dispatch({ type: 'SET_ERROR', payload: 'Please check your email and click the confirmation link to complete your registration.' });
+            return { success: true, requiresConfirmation: true };
+          }
         }
 
         return { success: true };
@@ -515,8 +552,69 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      console.log('🗑️ Deleting user account:', state.user.id);
+
+      // Check if this is a demo account
+      const isDemoAccount = DEMO_ACCOUNTS.some(demo => demo.id === state.user.id);
+      if (isDemoAccount) {
+        throw new Error('Demo accounts cannot be deleted. This is for demonstration purposes only.');
+      }
+
+      if (state.useSupabase) {
+        console.log('🗑️ LIVE MODE: Deleting account from Supabase...');
+        
+        // First delete all user data (meals will be deleted automatically due to CASCADE)
+        const { error: deleteUserError } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', state.user.id);
+
+        if (deleteUserError) throw deleteUserError;
+
+        // Delete the auth user (this will also sign them out)
+        const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(state.user.id);
+        
+        if (deleteAuthError) {
+          console.warn('Could not delete auth user (may require admin privileges):', deleteAuthError.message);
+          // Continue anyway - the user profile is deleted
+        }
+
+        // Sign out the user
+        await supabase.auth.signOut();
+        
+        console.log('✅ Account deleted from Supabase');
+      } else {
+        console.log('🗑️ DEV MODE: Deleting account from localStorage...');
+        
+        // Remove user from users array
+        const users = JSON.parse(localStorage.getItem('mealTracker_users') || '[]');
+        const updatedUsers = users.filter(u => u.id !== state.user.id);
+        localStorage.setItem('mealTracker_users', JSON.stringify(updatedUsers));
+
+        // Remove user session and their meal data
+        localStorage.removeItem('mealTracker_user');
+        localStorage.removeItem(`mealTracker_${state.user.id}`);
+        localStorage.removeItem(`mealTracker_favorites_${state.user.id}`);
+        
+        console.log('✅ Account deleted from localStorage');
+      }
+
+      // Clear user state
+      dispatch({ type: 'LOGOUT' });
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   const logout = async () => {
     try {
+      console.log('🚪 Logging out user...');
+      
       if (state.useSupabase) {
         await supabase.auth.signOut();
       } else {
@@ -525,10 +623,33 @@ export function AuthProvider({ children }) {
           localStorage.removeItem(`mealTracker_${state.user.id}`);
         }
       }
+      
+      // Clear user state
       dispatch({ type: 'LOGOUT' });
+      
+      // Force redirect to correct domain
+      const loginURL = getLoginURL();
+      console.log('🔄 Redirecting to:', loginURL);
+      
+      // Use window.location for hard redirect to ensure correct domain
+      if (loginURL.startsWith('https://')) {
+        window.location.href = loginURL;
+      } else {
+        // For local development, use router navigation
+        window.location.hash = '#/login';
+      }
+      
     } catch (error) {
       console.error('Error during logout:', error);
       dispatch({ type: 'LOGOUT' });
+      
+      // Even if logout fails, redirect to login
+      const loginURL = getLoginURL();
+      if (loginURL.startsWith('https://')) {
+        window.location.href = loginURL;
+      } else {
+        window.location.hash = '#/login';
+      }
     }
   };
 
@@ -618,6 +739,7 @@ export function AuthProvider({ children }) {
     login,
     signup,
     updateUser,
+    deleteAccount,
     logout,
     clearError,
     hasRole,

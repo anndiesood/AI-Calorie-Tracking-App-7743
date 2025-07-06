@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiUser, FiCamera, FiSave, FiEdit, FiLogOut, FiTarget, FiShield } = FiIcons;
+const { FiUser, FiCamera, FiSave, FiEdit, FiLogOut, FiTarget, FiShield, FiTrash2, FiAlertTriangle } = FiIcons;
 
 const Profile = () => {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, deleteAccount } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     age: user?.age || '',
@@ -79,13 +82,46 @@ const Profile = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       setIsLoggingOut(true);
       try {
-        // Add a small delay to show loading state
-        await new Promise(resolve => setTimeout(resolve, 500));
-        logout();
+        // The logout function in AuthContext will handle the redirect
+        await logout();
       } catch (error) {
         console.error('Logout error:', error);
         setIsLoggingOut(false);
+        // Force redirect even if logout fails
+        if (window.location.hostname === 'localhost') {
+          window.location.hash = '#/login';
+        } else {
+          window.location.href = 'https://www.mindmymeals.com/login';
+        }
       }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.toLowerCase() !== 'delete') {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    
+    try {
+      const result = await deleteAccount();
+      
+      if (result.success) {
+        // Account deleted successfully - redirect to correct domain
+        if (window.location.hostname === 'localhost') {
+          window.location.hash = '#/login';
+        } else {
+          window.location.href = 'https://www.mindmymeals.com/login';
+        }
+      } else {
+        alert(`Failed to delete account: ${result.error}`);
+        setIsDeletingAccount(false);
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('An error occurred while deleting your account. Please try again.');
+      setIsDeletingAccount(false);
     }
   };
 
@@ -155,6 +191,9 @@ const Profile = () => {
   const progressData = getProgressData();
   const roleBadge = getRoleBadge(user?.role);
 
+  // Check if this is a demo account
+  const isDemoAccount = user?.email?.includes('@mealtracker.com');
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -172,7 +211,9 @@ const Profile = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => isEditing ? handleSave() : setIsEditing(true)}
               className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
-                isEditing ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                isEditing
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <SafeIcon icon={isEditing ? FiSave : FiEdit} className="w-4 h-4" />
@@ -200,11 +241,7 @@ const Profile = () => {
           <div className="relative inline-block">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center mx-auto mb-3">
               {user?.profile_photo ? (
-                <img
-                  src={user.profile_photo}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+                <img src={user.profile_photo} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <SafeIcon icon={FiUser} className="w-12 h-12 text-primary-500" />
               )}
@@ -470,7 +507,115 @@ const Profile = () => {
             </div>
           </div>
         </div>
+
+        {/* Delete Account Section */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <SafeIcon icon={FiAlertTriangle} className="w-5 h-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-red-800 mb-2">Danger Zone</h4>
+                <p className="text-sm text-red-700 mb-4">
+                  {isDemoAccount 
+                    ? 'Demo accounts cannot be deleted. This is for demonstration purposes only.'
+                    : 'Once you delete your account, there is no going back. This will permanently delete your profile, all your meal data, and remove your access to the service.'
+                  }
+                </p>
+                
+                {!isDemoAccount && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium flex items-center space-x-2 hover:bg-red-700 transition-colors"
+                  >
+                    <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                    <span>Delete Account</span>
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md"
+          >
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <SafeIcon icon={FiAlertTriangle} className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Delete Account</h2>
+              <p className="text-gray-600">This action cannot be undone. This will permanently delete your account and all associated data.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="font-medium text-red-800 mb-2">What will be deleted:</h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  <li>• Your profile and personal information</li>
+                  <li>• All your meal tracking data</li>
+                  <li>• Your meal history and analytics</li>
+                  <li>• Your favorite meals and preferences</li>
+                  <li>• Access to your account</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  To confirm deletion, type <strong>"delete"</strong> in the box below:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Type 'delete' to confirm"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmText('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText.toLowerCase() !== 'delete' || isDeletingAccount}
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeletingAccount ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <SafeIcon icon={FiTrash2} className="w-4 h-4" />
+                      <span>Delete Account</span>
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };
